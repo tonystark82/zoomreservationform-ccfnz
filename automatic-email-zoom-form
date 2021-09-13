@@ -1,0 +1,218 @@
+// Room Reservation System
+// Anthony Ciriaco, 2020
+
+var ss = SpreadsheetApp.getActiveSpreadsheet();
+var sheet = ss.getSheets()[0];
+var lastRow = sheet.getLastRow();
+var lastColumn = sheet.getLastColumn();
+
+// Calendars to output appointments to
+var cal4256376125 = CalendarApp.getCalendarById('39v3erd7gsm33l25v94km818q4@group.calendar.google.com');
+var cal7038896523 = CalendarApp.getCalendarById('k5itjg6hgcp598v1aiili6cio4@group.calendar.google.com');
+var cal9213275594 = CalendarApp.getCalendarById('rgn10qnb102cpseo93lje326io@group.calendar.google.com');
+var cal8659535497 = CalendarApp.getCalendarById('dh2lllv4jpq8t05uecoic6hab8@group.calendar.google.com');
+var cal5894932456 = CalendarApp.getCalendarById('8upap6n85sacnkgjphm3kbbg2g@group.calendar.google.com');
+var cal6625908949 = CalendarApp.getCalendarById('ffakgkuul8p4na0j29mk6tv0os@group.calendar.google.com');
+var cal4040900010 = CalendarApp.getCalendarById('5hef54f3hofg9l3q6v8qe4b46o@group.calendar.google.com');
+var cal8409129265 = CalendarApp.getCalendarById('hos29op8udauaefneo68c1v49s@group.calendar.google.com');
+var cal2362002326 = CalendarApp.getCalendarById('952dbk9634rr7cdea3tguc2t2s@group.calendar.google.com');
+var cal6722224267 = CalendarApp.getCalendarById('u5qrp4id53ktps2hqbk1497pj4@group.calendar.google.com');
+
+
+// Username and Password
+
+                                      
+// Create an object from user submission
+function Submission(){
+  var row = lastRow;
+  this.timestamp = sheet.getRange(row, 1).getValue();
+  this.name = sheet.getRange(row, 2).getValue();
+  this.email = sheet.getRange(row, 3).getValue();
+  this.purpose = sheet.getRange(row, 4).getValue();
+  this.date = sheet.getRange(row, 5).getValue();
+  this.time = sheet.getRange(row, 6).getValue(); 
+  this.duration = sheet.getRange(row, 7).getValue();
+  this.zoom = sheet.getRange(row, 8).getValue();
+  this.accountname;
+  this.password = sheet.getRange(row, 10).getValue();
+  // Info not from spreadsheet
+  //this.zoomInt = this.zoom.replace(/^\D+/g, '');
+  this.status;
+  this.dateString = (this.date.getMonth() + 1) + '/' + this.date.getDate() + '/' + this.date.getFullYear().toString().substr(-2);
+  //this.dateString = (this.date.getMonth() + 1) + '/' + this.date.getDate() + '/' + this.date.getYear();
+  this.timeString = this.time.toLocaleTimeString();
+  this.date.setHours(this.time.getHours());
+  this.date.setMinutes(this.time.getMinutes());
+  this.calendar = eval('cal'+ String(this.zoom));
+  return this;
+}
+
+// Use duration to create endTime variable
+function getEndTime(request){
+  request.endTime = new Date(request.date);
+  switch (request.duration){
+    case "30 minutes":
+      request.endTime.setMinutes(request.date.getMinutes() + 30);
+      request.endTimeString = request.endTime.toLocaleTimeString();
+      break;
+    case "1 hour":
+      request.endTime.setMinutes(request.date.getMinutes() + 60);
+      request.endTimeString = request.endTime.toLocaleTimeString();
+      break;
+    case "2 hours":
+      request.endTime.setMinutes(request.date.getMinutes() + 120);
+      request.endTimeString = request.endTime.toLocaleTimeString();
+      break;
+    case "3 hours":
+      request.endTime.setMinutes(request.date.getMinutes() + 180);
+      request.endTimeString = request.endTime.toLocaleTimeString();
+      break;     
+  }
+}
+
+// Use zoom number to get accountName variable
+function getAccountName(request){
+  switch (request.zoom){
+    case 4256376125:
+      request.accountname = "ccfnewzealand.org@gmail.com";
+      break;
+    case 7038896523:
+      request.accountname = "ccfnz.zoom1@gmail.com";
+      break;
+    case 9213275594:
+      request.accountname = "ccfnz.zoom2@gmail.com";
+      break;
+    case 8659535497:
+      request.accountname = "ccfnz.zoom3@gmail.com";
+      break;
+    case 5894932456:
+      request.accountname = "ccfnz.zoom4@gmail.com";
+      break;
+    case 6625908949:
+      request.accountname = "ccfnz.zoom5@gmail.com";
+      break;
+    case 4040900010:
+      request.accountname = "ccfnz.zoom6@gmail.com";
+      break;
+    case 8409129265:
+      request.accountname = "ccfnz.zoom7@gmail.com";
+      break;
+    case 2362002326:
+      request.accountname = "ccfnz.zoom8@gmail.com";
+      break;
+    case 6722224267:
+      request.accountname = "ccfnz.zoom9@gmail.com";
+      break;
+      
+  }
+ }
+
+
+
+// Check for appointment conflicts
+function getConflicts(request){
+  var conflicts = request.calendar.getEvents(request.date, request.endTime);
+  if (conflicts.length < 1) {
+    request.status = "Approve";
+  } else {
+    request.status = "Conflict";
+  }
+}
+
+function updateCalendar(request){
+  var event = request.calendar.createEvent(
+    request.name,
+    request.date,
+    request.endTime
+    )
+}
+
+
+function draftEmail(request){
+  request.buttonLink = "https://forms.gle/hBNfw1sFhczXM1xk8";
+  request.buttonText = "New Request";
+  switch (request.status) {
+    case "Approve":
+      request.subject = "Confirmation: " + request.zoom + "Reservation for " + request.dateString;
+      request.header = "Confirmation";
+      request.message = "Your zoom use reservation has been scheduled. Meeting room: https://us02web.zoom.us/j/" + request.zoom;
+      break;
+    case "Conflict":
+      request.subject = "Conlfict with " + request.zoom + "Reservation for " + request.dateString;
+      request.header = "Conflict";
+      request.message = "There is a scheduling conflict. Please pick up another time or choose a different zoom room.";
+      request.buttonText = "Reschedule";     
+      break;
+  }
+}
+
+function sendEmail(request){
+  MailApp.sendEmail({
+    to: request.email,
+    subject: request.header,
+    htmlBody: makeEmail(request)
+  })
+  sheet.getRange(lastRow, lastColumn).setValue("Sent: " + request.status);
+}
+
+// ------------------ main ----------------
+
+function main(){
+  var request = new Submission();
+  //Logger.log(request);
+  getEndTime(request);
+  Logger.log(request);
+  getConflicts(request);
+  getAccountName(request);
+  draftEmail(request);
+  if (request.status == "Approve") updateCalendar(request);
+  //Logger.log(request);
+  sendEmail(request);
+}
+
+
+
+// Email for Room Reservation System
+// Kurt Kaiser, 2018
+// All rights reserved
+
+function makeEmail(request) {
+  return (
+    '<!DOCTYPE html><html><head><base target="_top"></head><body><div style="text-align: center;' +
+    'font-family: Arial;"><div id="center" style="width:300px;border: 2px dotted grey;background:' +
+    '#ececec; margin:25px;margin-left:auto; margin-right:auto;padding:15px;"><img src="https://upload.' +
+    "wikimedia.org/wikipedia/commons/thumb/6/69/Calendar_font_awesome.svg/512px-Calendar_font_awesome" +
+    '.svg.png"width="180" style="margin:10px 0px"><br /><div style=" border: 2px dotted grey;' +
+    'background:white;margin-right:auto; margin-left:auto; padding:10px;"><h2>' +
+    request.header +
+    "</h2><h3>" +
+    request.message +
+    "<br /><br/>" +
+     "Name: " + request.name +
+    "<br />" +
+     "Meeting ID: " + request.zoom +
+    "<br /><br/>" +
+    "Host Login Details (Do not share with Participants):"+
+    "<br />" +
+    "Login Email: " + request.accountname +
+    "<br />" +
+     "Login Password: Ccfnz2020" +
+    "<br /><br/>" +    
+     "Purpose: " + request.purpose + 
+    "<br />" +
+    request.date +
+    "<br />" +
+    "Start Time: " + request.timeString.slice(0, request.timeString.length) +
+    "<br />" +
+    "End Time: " + request.endTimeString.slice(0, request.endTimeString.length) +
+    "<br /></h3><br />" +
+    '<a href="' +
+    request.buttonLink +
+    '" class="btn" style="-webkit-border-radius: 28;' +
+    "-moz-border-radius: 5;border-radius: 5px;font-family: Arial; color: #ffffff;font-size: 15px;" +
+    'background: #ff7878;padding:8px 20px 8px 20px;text-decoration: none;">' +
+    request.buttonText +
+    '</a><br /><br /></div></div><div><p style="font-size:12px">' +
+    'Created by<a href="https://www.linkedin.com/in/kurtkaiser/"> Kurt Kaiser</a> </p></div></body></html>'
+  );
+}
